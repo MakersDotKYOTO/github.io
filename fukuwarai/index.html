@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>福笑い競技 自動採点 v1.1 Integrated</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#191919;background:#f5f6f8}
+*{box-sizing:border-box}body{margin:0}
+header{background:#111;color:#fff;padding:18px 22px}
+header h1{font-size:1.35rem;margin:0 0 4px}header p{margin:0;color:#ddd;font-size:.9rem}
+main{max-width:1220px;margin:auto;padding:20px}
+.card{background:#fff;border:1px solid #ddd;border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+h2{font-size:1.08rem;margin:0 0 12px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:9px 8px;border-bottom:1px solid #e6e6e6;text-align:right;font-size:.9rem;vertical-align:middle}
+th:first-child,td:first-child{text-align:left}
+.note{font-size:.88rem;color:#555;line-height:1.6}
+.privacy{background:#edf8ee;border:1px solid #bddfc2;padding:10px 12px;border-radius:10px;font-size:.9rem;margin-top:10px}
+.offline{background:#eef4ff;border:1px solid #c8d7f5;padding:10px 12px;border-radius:10px;font-size:.9rem;margin-top:10px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:850px){.row{grid-template-columns:1fr}}
+.drop{border:2px dashed #aaa;border-radius:12px;padding:22px;text-align:center;background:#fafafa}
+input[type=file],select{max-width:100%}
+button{border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;background:#111;color:#fff;margin:6px 4px 0 0}
+button.secondary{background:#e9e9e9;color:#111}button:disabled{opacity:.45;cursor:not-allowed}
+.status{padding:10px 12px;border-radius:9px;background:#f0f0f0;font-size:.9rem;margin-top:10px}
+.status.ok{background:#edf8ee}.status.warn{background:#fff3d9}.status.err{background:#fdeaea}
+canvas{display:block;max-width:100%;height:auto;border:1px solid #ccc;border-radius:10px;background:#222}
+.total{font-size:2.4rem;font-weight:800;letter-spacing:-.04em;margin:8px 0}.total small{font-size:1rem;font-weight:600;color:#666}
+.pill{display:inline-block;border-radius:999px;padding:4px 8px;background:#eee;font-size:.78rem;margin-left:6px}
+.pill.blue{background:#dce9ff;color:#153a72}.warn-list{margin:8px 0 0;padding-left:22px;color:#8a4b00;font-size:.88rem}
+details{margin-top:12px}code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.hidden{display:none!important}.good{font-weight:700;color:#146c2e}.edge{font-weight:700;color:#9a5700}.bad{font-weight:700;color:#a00}
+.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.tab{background:#e5e5e5;color:#111}.tab.active{background:#111;color:#fff}
+.rank1{font-weight:800}.rank2,.rank3{font-weight:700}.small{font-size:.78rem;color:#666}.left{text-align:left!important}
+.batch-wrap{overflow:auto}.batch-table{min-width:1000px}
+.team-select{font-weight:700;padding:4px 7px;border-radius:7px;border:1px solid #aaa;background:#fff}.duplicate{border-color:#c00;background:#fff0f0}
+.progress{height:10px;background:#e9e9e9;border-radius:999px;overflow:hidden;margin-top:10px}.progress>div{height:100%;width:0;background:#222;transition:width .15s}
+.rankbox{font-size:1.02rem;padding:10px 12px;border-radius:10px;background:#f4f4f4;margin-top:10px}
+
+dialog{border:0;border-radius:16px;padding:0;max-width:820px;width:min(92vw,820px);box-shadow:0 16px 60px rgba(0,0,0,.28)}
+dialog::backdrop{background:rgba(0,0,0,.48)}
+.dialog-head{padding:16px 18px;background:#111;color:#fff;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.dialog-head h3{margin:0;font-size:1.05rem}
+.dialog-body{padding:18px}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:14px}
+.score-input{width:78px;padding:6px 7px;border:1px solid #aaa;border-radius:7px;text-align:right}
+.reason{width:100%;min-height:70px;padding:9px;border:1px solid #aaa;border-radius:8px;resize:vertical}
+.edit-btn{padding:7px 9px;margin:0;font-size:.82rem;background:#444}
+.edit-btn.check{background:#9a5700}
+.edit-btn.manual{background:#146c2e}
+.manual-badge{display:inline-block;padding:2px 6px;border-radius:999px;background:#e2f2e6;color:#146c2e;font-size:.72rem;font-weight:700}
+.check-badge{display:inline-block;padding:2px 6px;border-radius:999px;background:#fff0cf;color:#8a4b00;font-size:.72rem;font-weight:700}
+#comparisonCanvas{background:#fff;border:1px solid #ddd;max-width:100%;height:auto}
+.compare-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
+
+
+.sortbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0}
+.sortbar label{font-size:.9rem;font-weight:700}
+.sortbar select{padding:7px 10px;border:1px solid #aaa;border-radius:8px;background:#fff;color:#111}
+select,option,.team-select,.score-input{color:#111!important;background-color:#fff!important}
+#batchBody td:nth-child(1),#batchBody td:nth-child(2){color:#111!important}
+
+
+.integration-bar{background:#eef7ff;border:2px solid #2273b8;border-radius:12px;padding:10px 12px;margin-bottom:14px}
+.integration-bar strong{display:block;margin-bottom:3px}
+.integration-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.integration-actions a,.integration-actions button{display:inline-flex;align-items:center;min-height:42px;padding:8px 12px;border-radius:9px;background:#111;color:#fff;text-decoration:none;font-weight:700;border:0}
+
+</style>
+</head>
+<body>
+<header>
+  <h1>福笑い競技 自動採点 <span class="pill blue">v1.1 Integrated</span></h1>
+  <p>A3縦 297×420 mm ／ 4パーツ ／ 30点満点 ／ 完全ローカル処理 ／ 大会統合連携</p>
+</header>
+<main>
+<div class="integration-bar">
+  <strong>大会統合採点システムと連携中</strong>
+  <span id="integrationStatus">審判モードの一括採点結果を自動的に大会総合画面へ共有します。</span>
+  <div class="integration-actions"><button type="button" id="returnToCompetition">大会採点画面へ戻る</button></div>
+</div>
+
+<section class="card">
+  <h2>採点基準</h2>
+  <table>
+    <thead><tr><th>評価項目</th><th>1パーツ</th><th>4パーツ合計</th><th>比率</th></tr></thead>
+    <tbody>
+      <tr><td>A3シート上に貼れた</td><td>5.25</td><td>21.00</td><td>70%</td></tr>
+      <tr><td>位置の正確さ</td><td>最大 1.80</td><td>7.20</td><td>24%</td></tr>
+      <tr><td>向き・角度</td><td>最大 0.45</td><td>1.80</td><td>6%</td></tr>
+      <tr><th>合計</th><th>7.50</th><th>30.00</th><th>100%</th></tr>
+    </tbody>
+  </table>
+  <p class="note">位置は正解から60 mmで0点、角度は90°差で0点になる線形減点です。A3補正画像内でパーツを検出できれば貼付成功とします。</p>
+  <div class="privacy"><strong>競技写真はこの端末内だけで処理します。</strong> 写真をChatGPTや外部サーバーへ送信するコードはありません。</div>
+  <div class="offline"><strong>v0.6も外部ライブラリ不要です。</strong> OpenCV.jsもCDNも使わず、HTML内蔵の軽量画像処理エンジンだけで動作します。ZIP展開後に <code>index.html</code> をダブルクリックして利用できます。</div>
+</section>
+
+<div class="tabs">
+  <button id="tabParticipant" class="tab active">参加者：1枚採点</button>
+  <button id="tabJudge" class="tab">審判：一括採点</button>
+</div>
+
+<section id="participantMode">
+<section class="card">
+  <h2>参加者モード</h2>
+  <div class="drop">
+    <input id="fileInput" type="file" accept="image/*">
+    <div class="note" style="margin-top:8px">ブラックボード全体・エントリー番号・A3福笑いシートが入るように撮影してください。</div>
+  </div>
+  <div id="engineStatus" class="status ok">オフライン採点エンジン準備完了。</div>
+  <button id="autoBtn" disabled>自動検出して採点</button>
+  <button id="manualBtn" class="secondary" disabled>A3四隅を手動指定</button>
+  <button id="resetBtn" class="secondary" disabled>リセット</button>
+</section>
+
+<div class="row">
+<section class="card">
+  <h2>元画像</h2>
+  <canvas id="sourceCanvas"></canvas>
+  <p id="manualHelp" class="note hidden">A3用紙の四隅を4回クリックしてください。順番は自由です。</p>
+</section>
+<section class="card"><h2>補正後 A3</h2><canvas id="warpCanvas" width="297" height="420"></canvas></section>
+</div>
+
+<section id="resultCard" class="card hidden">
+  <h2>採点結果</h2>
+  <div id="totalScore" class="total">-- <small>/ 30.00</small></div>
+  <div id="teamGuess" class="note"></div>
+  <div id="perf" class="note"></div>
+  <table>
+    <thead><tr><th>パーツ</th><th>状態</th><th>貼付</th><th>位置誤差</th><th>位置点</th><th>角度差</th><th>角度点</th><th>小計</th></tr></thead>
+    <tbody id="resultBody"></tbody>
+  </table>
+  <ul id="warnings" class="warn-list"></ul>
+  <details><summary>検出値を表示</summary><pre id="debugText" class="note"></pre></details>
+</section>
+</section>
+
+<section id="judgeMode" class="hidden">
+<section class="card">
+  <h2>審判モード：最大9枚を一括採点</h2>
+  <div class="drop">
+    <input id="batchInput" type="file" accept="image/*" multiple>
+    <div class="note" style="margin-top:8px">写真をまとめて選択してください。Team 1〜9は固定ネームプレートから自動推定し、不確かな場合は表内で手動修正できます。</div>
+  </div>
+  <button id="batchBtn" disabled>一括採点を開始</button>
+  <button id="csvBtn" class="secondary" disabled>CSVを保存</button>
+  <button id="batchResetBtn" class="secondary">結果をクリア</button>
+  <div id="batchStatus" class="status">画像を選択してください。</div>
+  <div class="progress"><div id="batchProgress"></div></div>
+</section>
+
+<section id="batchResultCard" class="card hidden">
+  <h2>順位・採点結果</h2>
+  <div id="podium" class="rankbox"></div>
+  <div id="duplicateWarning" class="status hidden"></div>
+  <div class="sortbar">
+    <label for="batchSort">表示順</label>
+    <select id="batchSort">
+      <option value="rank">順位順</option>
+      <option value="team">Team番号順</option>
+      <option value="scoreDesc">得点 高い順</option>
+      <option value="scoreAsc">得点 低い順</option>
+      <option value="status">要確認を先頭</option>
+      <option value="upload">アップロード順</option>
+    </select>
+  </div>
+  <div class="batch-wrap">
+    <table class="batch-table">
+      <thead><tr>
+        <th>順位</th><th>Team</th><th class="left">ファイル</th><th>番号認識</th><th>合計</th>
+        <th>左目</th><th>右目</th><th>鼻</th><th>口</th><th>判定</th><th>編集</th>
+      </tr></thead>
+      <tbody id="batchBody"></tbody>
+    </table>
+  </div>
+  <p class="note">「要確認」の行は <strong>点数確認・修正</strong> から手動採点できます。修正後は順位・CSV・比較画像へ即時反映されます。手動値は理由とともに記録され、自動採点へ戻すこともできます。</p>
+  <p class="note">同点時は、①最終合計得点、②自動判定時の合計位置誤差が小さい、③検出パーツ数が多い、④鼻の位置誤差が小さい、の順で順位を決定します。</p>
+</section>
+
+<section id="comparisonCard" class="card hidden">
+  <h2>比較結果画像</h2>
+  <div class="compare-actions">
+    <button id="refreshComparisonBtn">画像を更新</button>
+    <button id="downloadPngBtn" class="secondary">PNGを保存</button>
+  </div>
+  <canvas id="comparisonCanvas" width="1800" height="1200"></canvas>
+  <p class="note">現在の「表示順」に合わせて、補正後A3画像・順位・合計点・4パーツ得点・判定状態を1枚のPNGにまとめます。手動補正がある場合は「手動補正」と表示します。</p>
+</section>
+</section>
+
+<dialog id="scoreDialog">
+  <div class="dialog-head">
+    <h3 id="editTitle">点数確認・修正</h3>
+    <button id="closeDialogBtn" class="secondary" style="margin:0">閉じる</button>
+  </div>
+  <div class="dialog-body">
+    <p class="note">自動採点値を確認し、必要な項目だけ修正してください。貼付点は競技ルールに合わせて 0 または 5.25 点です。</p>
+    <table>
+      <thead><tr><th>パーツ</th><th>自動小計</th><th>貼付</th><th>位置</th><th>角度</th><th>修正小計</th></tr></thead>
+      <tbody id="editScoreBody"></tbody>
+    </table>
+    <label class="note" for="editReason"><strong>修正理由・審判メモ</strong></label>
+    <textarea id="editReason" class="reason" placeholder="例：右目が他パーツの下に隠れていることを現物で確認。"></textarea>
+    <div class="dialog-actions">
+      <button id="resetManualBtn" class="secondary" type="button">自動採点に戻す</button>
+      <button id="saveManualBtn" type="button">修正点を確定</button>
+    </div>
+  </div>
+</dialog>
+
+<canvas id="analysisCanvas" class="hidden"></canvas>
+</main>
+
+<script>
+'use strict';
+
+const ANALYSIS_MAX = 600;
+const CANON_W = 297, CANON_H = 420, PX_PER_MM = 1.0;
+const POS_ZERO_MM = 60.0, ANGLE_ZERO_DEG = 90.0;
+const SCORE_PLACE = 5.25, SCORE_POS = 1.80, SCORE_ANGLE = 0.45;
+const REF_AREA = {eye:1547,nose:731,mouth:1765};
+
+const TARGETS = {
+  eyeL:{name:'左目',center:[98.74225,196.7798],angle:341.4893},
+  eyeR:{name:'右目',center:[200.0033,196.77865],angle:198.4843},
+  nose:{name:'鼻',center:[149.36375,247.1829],angle:270.1739},
+  mouth:{name:'口',center:[149.39745,320.2649],angle:268.2792}
+};
+
+const DIGIT_PACKED = {"1": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAD8AAAAAAAAB/4AAAAAAAA//wAAAAAAAP//AAAAAAAH//8AAAAAAD///wAAAAAA////AAAAAAP///8AAAAAB////wAAAAAH////AAAAAA////8AAAAAD////wAAAAAP////AAAAAAf/8/8AAAAAB//D/wAAAAAD/gP/AAAAAAH8A/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAAAf4AAAAAAAAA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "2": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAAAAAAAAH/+AAAAAAAD///gAAAAAB////gAAAAAP////AAAAAD/////AAAAAf////+AAAAD/////8AAAAf/////4AAAD//////wAAAf//////gAAD//+B//+AAAP//AAf/8AAB//wAA//wAAH/+AAB//AAA//wAAD/+AAD/+AAAH/8AAf/wAAAP/wAB/+AAAA//AAH/4AAAB/8AA//AAAAH/wAD/8AAAAf/gAP/wAAAA/+AA/+AAAAD/4AD/4AAAAP/gAf/gAAAA/+AB/+AAAAD/4AH/4AAAAP/gAP/gAAAA/+AA/+AAAAD/4AB/wAAAAP/gAH+AAAAB/+AAHgAAAAH/wAAAAAAAAf/AAAAAAAAD/8AAAAAAAAf/gAAAAAAAB/+AAAAAAAAP/wAAAAAAAB//AAAAAAAAP/4AAAAAAAA//AAAAAAAAH/8AAAAAAAA//gAAAAAAAH/8AAAAAAAA//wAAAAAAAH/+AAAAAAAAf/wAAAAAAAD/+AAAAAAAAf/wAAAAAAAD//AAAAAAAAf/4AAAAAAAB//AAAAAAAAf/4AAAAAAAB//AAAAAAAAP/4AAAAAAAB//AAAAAAAAP/4AAAAAAAB//AAAAAAAAP/8AAAAAAAA//gAAAAAAAH/8AAAAAAAA//gAAAAAAAH/8AAAAAAAA//gAAAAAAAH/8AAAAAAAA//wAAAAAAAD/+AAAAAAAAf/wAAAAAAAD/+AAAAAAAAf/wAAAAAAAD/+AAAAAAAAf/wAAAAAAAD/+AAAAAAAAf/wAAAAAAAB//AAAAAAAAP/4AAAAAAAB//AAAAAAAAP///////gAB////////gAH////////AA////////8AD////////wAf////////AB////////8AD////////wAP////////AAf///////4AA////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "3": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+AAAAAAAAD//gAAAAAAB///wAAAAAA////wAAAAAH////gAAAAB/////gAAAAP/////AAAAB/////+AAAAP/////8AAAB//////4AAAP//4H//gAAB//4AD//AAAH/+AAH/+AAA//gAAH/4AAD/8AAAP/wAAf/gAAAf/AAB/8AAAB/8AAH/wAAAD/wAAf+AAAAP/gAD/4AAAA/+AAP/AAAAD/4AA/8AAAAP/gAD/wAAAA/+AAP/AAAAD/4AA/8AAAAP/gAB/wAAAA/+AAH+AAAAD/wAAPwAAAAf/AAAeAAAAB/8AAAAAAAAP/gAAAAAAAB/+AAAAAAAAf/wAAAAAAAD/+AAAAAAAA//wAAAAAAH//+AAAAAAA///wAAAAAAH//+AAAAAAA///gAAAAAAD//4AAAAAAAP//gAAAAAAA///AAAAAAAD///gAAAAAAH///gAAAAAAP///AAAAAAA///+AAAAAAAf//8AAAAAAAB//4AAAAAAAA//wAAAAAAAB//AAAAAAAAD/+AAAAAAAAH/8AAAAAAAAP/wAAAAAAAA//gAAAAAAAB/+AAAAAAAAD/4AHwAAAAAP/wA/gAAAAA//AH/AAAAAB/8Af8AAAAAH/wD/4AAAAAf/AP/gAAAAB/8A/+AAAAAH/wD/4AAAAAf/AH/gAAAAB/8Af+AAAAAH/wB/8AAAAAf/AH/wAAAAB/8Af/AAAAAP/wA/+AAAAA//AD/4AAAAD/4AP/wAAAAf/gAf/gAAAD/+AB//AAAAP/wAD/+AAAB//AAP/8AAAf/4AAf/8AAD//AAA//8AA//8AAD///B///gAAH//////8AAAP//////gAAAf/////8AAAAf/////gAAAA/////4AAAAA/////AAAAAB////wAAAAAA///8AAAAAAAf/+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "4": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAfAAAAAAAAAD+AAAAAAAAAf8AAAAAAAAD/wAAAAAAAAf/AAAAAAAAB/8AAAAAAAAP/wAAAAAAAB//AAAAAAAAP/8AAAAAAAA//wAAAAAAAH//AAAAAAAA//8AAAAAAAH//wAAAAAAA///AAAAAAAD//8AAAAAAAf//wAAAAAAD///AAAAAAAf/f8AAAAAAB/5/wAAAAAAP/H/AAAAAAB/8f8AAAAAAP/h/wAAAAAB/8H/AAAAAAH/gf8AAAAAA/+B/wAAAAAH/wH/AAAAAAf+Af8AAAAAD/wB/wAAAAAf+AH/AAAAAD/4Af8AAAAAf/AB/wAAAAB/4AH/AAAAAP/AAf8AAAAB/8AB/wAAAAP/gAH/AAAAA/8AAf8AAAAH/gAB/wAAAA/+AAH/AAAAH/wAAf8AAAA/+AAB/wAAAD/wAAH/AAAAf+AAAf8AAAD/4AAB/wAAAf/AAAH/AAAB/4AAAf8AAAP/AAAB/wAAB/8AAAH/AAAP///////+AA////////+AH////////8Af////////wB/////////AH////////8Af////////wA////////+AB////////wAAAAAAAf8AAAAAAAAB/wAAAAAAAAH/AAAAAAAAAf8AAAAAAAAB/wAAAAAAAAH/AAAAAAAAAf8AAAAAAAAB/wAAAAAAAAH/AAAAAAAAAf8AAAAAAAAB/wAAAAAAAAH/AAAAAAAAAf8AAAAAAAAB/wAAAAAAAAD+AAAAAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "5": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//////AAAB///////AAAP//////+AAB///////8AAH///////wAAf///////gAB///////+AAH///////wAAf///////AAB///////4AAH///////gAAf//////4AAB/8AAAAAAAAH/wAAAAAAAAf/AAAAAAAAB/8AAAAAAAAH/wAAAAAAAAf/AAAAAAAAB/8AAAAAAAAH/wAAAAAAAAf/AAAAAAAAB/8AAAAAAAAH/wAAAAAAAAf/AAAAAAAAB/8AAAAAAAAH/wAAAAAAAAf/AAAAAAAAB/8AAAAAAAAH/wAAAAAAAAf/AAAAAAAAB////AAAAAAH////+AAAAAf/////AAAAB//////AAAAH/////+AAAAf/////+AAAB//////8AAAH//////8AAAf//////4AAA///////gAAB///////AAAB//////+AAAAAAAB//8AAAAAAAB//4AAAAAAAD//gAAAAAAAD//AAAAAAAAH/8AAAAAAAAP/4AAAAAAAA//gAAAAAAAB/+AAAAAAAAD/4AAAAAAAAP/wAAAAAAAA//AB+AAAAAB/8AP8AAAAAH/wB/4AAAAAf/AH/gAAAAB/8A//AAAAAH/wD/8AAAAAf/AP/wAAAAB/8A//AAAAAH/wB/8AAAAAf/AH/wAAAAB/8Af/AAAAAH/wB/+AAAAA//AH/4AAAAD/8AP/wAAAAP/gA//AAAAB/+AD/+AAAAP/4AH/8AAAB//AAf/4AAAP/8AA//wAAB//wAD//gAAP/+AAH//gAD//4AAf//gA///AAA///////4AAB///////AAAD//////8AAAP//////gAAAP/////8AAAAf/////AAAAA/////4AAAAA////+AAAAAA////gAAAAAA///4AAAAAAAf/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "6": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAAAAAAAAH8AAAAAAAAA/4AAAAAAAAH/wAAAAAAAAf/AAAAAAAAD/8AAAAAAAAf/wAAAAAAAB//AAAAAAAAP/8AAAAAAAA//gAAAAAAAH/+AAAAAAAAf/wAAAAAAAD/+AAAAAAAAf/4AAAAAAAB//AAAAAAAAP/8AAAAAAAA//gAAAAAAAH/8AAAAAAAA//wAAAAAAAD/+AAAAAAAAf/4AAAAAAAB//AAAAAAAAP/8AAAAAAAA//gAAAAAAAH/8AAAAAAAA//wAAAAAAAD/+AAAAAAAAf/4AAAAAAAD//AAAAAAAAP/4AAAAAAAB//gAAAAAAAH/8AAAAAAAA//gAAAAAAAD/+AAAAAAAAf/wAAAAAAAD///4AAAAAAP///8AAAAAB////8AAAAAP////8AAAAA/////8AAAAH/////4AAAAf/////wAAAD//////gAAAf//////AAAB//////+AAAP//gB//8AAA//4AB//wAAH/+AAB//gAA//wAAD/+AAD/+AAAH/8AAP/wAAAP/wAB/+AAAAf/gAH/wAAAB/+AAf/AAAAD/4AD/8AAAAP/wAP/gAAAAf/AA/+AAAAB/8AD/4AAAAH/wAP/gAAAAf/AA/+AAAAB/8AH/wAAAAD/wAf/AAAAAP/AB/8AAAAA/8AH/wAAAAH/wAP/gAAAAf/AA/+AAAAB/8AD/4AAAAH/wAP/gAAAAf/AA/+AAAAD/8AB/8AAAAP/gAH/wAAAA/+AAf/gAAAH/4AB/+AAAAf/AAD/8AAAH/8AAP/4AAA//wAAf/wAAD/+AAA//wAA//wAAD//wAf//AAAH//////4AAAP//////AAAA//////8AAAA//////AAAAB/////4AAAAD/////AAAAAD////wAAAAAH///+AAAAAAH///gAAAAAAB//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "7": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//////+AAD///////+AAf///////8AD////////4AP////////gB////////+AH////////4AP////////gA////////+AB////////wAH////////AAH///////8AAAAAAAAf/gAAAAAAAB/+AAAAAAAAP/wAAAAAAAB//AAAAAAAAH/4AAAAAAAAf/gAAAAAAAD/8AAAAAAAAP/wAAAAAAAB/+AAAAAAAAH/4AAAAAAAA//gAAAAAAAD/8AAAAAAAAf/gAAAAAAAB/+AAAAAAAAP/wAAAAAAAA//AAAAAAAAH/8AAAAAAAAf/gAAAAAAAD/+AAAAAAAAP/wAAAAAAAB//AAAAAAAAH/4AAAAAAAAf/gAAAAAAAD/8AAAAAAAAP/wAAAAAAAB/+AAAAAAAAP/4AAAAAAAA//gAAAAAAAH/8AAAAAAAAf/gAAAAAAAB/+AAAAAAAAP/4AAAAAAAA//AAAAAAAAH/8AAAAAAAAf/gAAAAAAAD/+AAAAAAAAP/wAAAAAAAB//AAAAAAAAH/4AAAAAAAA//gAAAAAAAD/8AAAAAAAAf/wAAAAAAAB/+AAAAAAAAP/4AAAAAAAA//gAAAAAAAH/8AAAAAAAAf/wAAAAAAAB/+AAAAAAAAP/4AAAAAAAA//AAAAAAAAH/8AAAAAAAAf/gAAAAAAAD/+AAAAAAAAP/wAAAAAAAB//AAAAAAAAH/4AAAAAAAA//gAAAAAAAD/8AAAAAAAAf/wAAAAAAAB/+AAAAAAAAP/4AAAAAAAA//AAAAAAAAH/8AAAAAAAAf/wAAAAAAAD/+AAAAAAAAP/4AAAAAAAA//AAAAAAAAH/8AAAAAAAAf/gAAAAAAAD/+AAAAAAAAP/wAAAAAAAA//AAAAAAAAD/4AAAAAAAAH/gAAAAAAAAP8AAAAAAAAAfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "8": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH4AAAAAAAAH/+AAAAAAAD///AAAAAAAf///AAAAAAH////AAAAAA////8AAAAAH////8AAAAA/////4AAAAH/////wAAAA//////AAAAH/////+AAAAf/8Af/4AAAD//AA//wAAAP/4AB//AAAA//AAD/+AAAH/4AAH/4AAAf/AAAP/gAAB/8AAA//AAAP/wAAB/8AAA/+AAAH/wAAD/4AAAf/AAAP/gAAB/8AAA/+AAAH/wAAD/4AAAf/AAAP/gAAB/8AAA/+AAAH/wAAD/8AAA//AAAH/wAAD/4AAAf/gAAf/gAAB/+AAB/+AAAD/8AAP/wAAAP/4AB//AAAAf/wAP/4AAAB//wD//gAAAD/////8AAAAH/////wAAAAP////8AAAAAf////gAAAAB////+AAAAAD////wAAAAA/////wAAAAH/////gAAAA//////AAAAH/////+AAAA//////8AAAD//8P//4AAAf/+AD//gAAD//gAD//AAAP/4AAH/+AAB//AAAP/4AAH/4AAAf/wAA//gAAA//AAD/8AAAD/8AAP/gAAAH/4AB/+AAAAf/gAH/wAAAA/+AAf/AAAAD/4AB/8AAAAP/gAH/wAAAA/+AA//AAAAB/4AD/8AAAAH/gAP/wAAAAf+AA//AAAAD/4AB/8AAAAP/gAH/wAAAA/+AAf/AAAAD/4AB/8AAAAP/gAH/4AAAA/+AAP/gAAAH/4AA//AAAA//AAD/8AAAD/8AAP/4AAAf/wAAf/gAAB/+AAB//AAAP/4AAD//AAD//AAAP/+AAf/8AAAf/+AH//gAAA//////8AAAB//////gAAAH/////+AAAAP/////wAAAAP////+AAAAAf////gAAAAA////8AAAAAA////AAAAAAA///wAAAAAAAf/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "9": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8AAAAAAAAP//AAAAAAAH///gAAAAAB////gAAAAAf////gAAAAD/////AAAAA//////AAAAD/////+AAAAf/////8AAAH//////4AAAf//////gAAD//wAP//AAAf/8AAP/+AAB//AAAP/4AAP/4AAAf/wAA//AAAA//AAH/8AAAB/+AAf/gAAAH/4AB/8AAAAP/gAP/wAAAA//AA/+AAAAB/8AD/4AAAAH/wAP/gAAAAf/AA/+AAAAB/8AH/wAAAAD/wAf/AAAAAP/AB/8AAAAA/8AH/wAAAAD/wAf/AAAAAP/AB/8AAAAA/8AH/4AAAAD/wAP/gAAAAf/AA/+AAAAB/8AD/4AAAAH/wAP/wAAAA//AAf/AAAAD/4AB/8AAAAP/gAH/4AAAB/+AAP/wAAAP/wAA//gAAB//AAD//AAAP/8AAH/+AAB//gAAP/+AAf/8AAA///AP//wAAB//////+AAAD//////4AAAH//////AAAAP/////4AAAAf/////gAAAA/////8AAAAA/////wAAAAA////+AAAAAAf///wAAAAAAP///AAAAAAAAP/4AAAAAAAB//gAAAAAAAH/8AAAAAAAA//gAAAAAAAH/+AAAAAAAAf/wAAAAAAAD//AAAAAAAAf/4AAAAAAAB//gAAAAAAAP/8AAAAAAAA//gAAAAAAAH/8AAAAAAAAf/wAAAAAAAD/+AAAAAAAAf/4AAAAAAAB//AAAAAAAAP/8AAAAAAAB//gAAAAAAAH/8AAAAAAAA//wAAAAAAAH/+AAAAAAAAf/4AAAAAAAD//AAAAAAAAP/4AAAAAAAB//gAAAAAAAH/8AAAAAAAA//gAAAAAAAD/+AAAAAAAAP/wAAAAAAAA//AAAAAAAAD/4AAAAAAAAP/gAAAAAAAAf8AAAAAAAAA/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"};
+
+let currentAnalysis=null,currentFile=null,manualMode=false,manualPoints=[],batchFiles=[],batchResults=[];
+document.getElementById('returnToCompetition')?.addEventListener('click',()=>window.parent.postMessage({type:'close-fukuwarai'},'*'));
+const COMPETITION_RESULT_KEY='fukuwarai_competition_results_v1';
+function publishCompetitionResults(){
+  const rows=batchResults.filter(r=>r.result&&!r.error&&r.team);
+  const results=rows.map(r=>({
+    teamNumber:Number(r.team),
+    score:Number(getFinalTotal(r).toFixed(2)),
+    status:getRowStatus(r),
+    manual:!!r.manual,
+    file:r.file||''
+  }));
+  const payload={version:1,updatedAt:new Date().toISOString(),results};
+  try{
+    localStorage.setItem(COMPETITION_RESULT_KEY,JSON.stringify(payload));
+    const el=document.getElementById('integrationStatus');
+    if(el)el.textContent=results.length
+      ? `${results.length} Team分の最新結果を大会統合画面へ共有しました。`
+      : '共有可能な採点結果はまだありません。';
+    try{window.opener?.postMessage({type:'fukuwarai-results-updated'},'*')}catch(e){}
+    try{window.parent!==window&&window.parent.postMessage({type:'fukuwarai-results-updated'},'*')}catch(e){}
+  }catch(e){
+    const el=document.getElementById('integrationStatus');
+    if(el)el.textContent='統合結果の保存に失敗しました。';
+  }
+}
+
+let digitTemplates={};
+const $=id=>document.getElementById(id);
+const sourceCanvas=$('sourceCanvas'),warpCanvas=$('warpCanvas'),analysisCanvas=$('analysisCanvas');
+
+function unpackBits(b64,nBits=64*96){
+  const raw=atob(b64),out=new Uint8Array(nBits);let k=0;
+  for(let i=0;i<raw.length&&k<nBits;i++){
+    const v=raw.charCodeAt(i);
+    for(let b=7;b>=0&&k<nBits;b--)out[k++]=(v>>b)&1;
+  }
+  return out;
+}
+for(const [k,v] of Object.entries(DIGIT_PACKED))digitTemplates[Number(k)]=unpackBits(v);
+
+$('tabParticipant').addEventListener('click',()=>switchMode(true));
+$('tabJudge').addEventListener('click',()=>switchMode(false));
+function switchMode(participant){
+  $('participantMode').classList.toggle('hidden',!participant);
+  $('judgeMode').classList.toggle('hidden',participant);
+  $('tabParticipant').classList.toggle('active',participant);
+  $('tabJudge').classList.toggle('active',!participant);
+}
+
+function enableButtons(){
+  $('autoBtn').disabled=!currentAnalysis;
+  $('manualBtn').disabled=!currentAnalysis;
+  $('resetBtn').disabled=!currentAnalysis;
+  $('batchBtn').disabled=!batchFiles.length;
+}
+
+function loadImageFile(file){
+  return new Promise((resolve,reject)=>{
+    const img=new Image(),url=URL.createObjectURL(file);
+    img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};
+    img.onerror=e=>{URL.revokeObjectURL(url);reject(e)};
+    img.src=url;
+  });
+}
+
+function prepareAnalysis(img){
+  const scale=Math.min(1,ANALYSIS_MAX/Math.max(img.naturalWidth,img.naturalHeight));
+  const w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
+  analysisCanvas.width=w;analysisCanvas.height=h;
+  const ctx=analysisCanvas.getContext('2d',{willReadFrequently:true});
+  ctx.clearRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+  const imageData=ctx.getImageData(0,0,w,h),gray=new Uint8Array(w*h);
+  const d=imageData.data;
+  for(let i=0,j=0;i<d.length;i+=4,j++)gray[j]=(d[i]*77+d[i+1]*150+d[i+2]*29)>>8;
+  return {w,h,imageData,gray};
+}
+
+function copyAnalysisToSource(a){
+  sourceCanvas.width=a.w;sourceCanvas.height=a.h;
+  sourceCanvas.getContext('2d').putImageData(a.imageData,0,0);
+}
+
+$('fileInput').addEventListener('change',async e=>{
+  const file=e.target.files&&e.target.files[0];if(!file)return;
+  currentFile=file;
+  try{
+    const img=await loadImageFile(file);currentAnalysis=prepareAnalysis(img);copyAnalysisToSource(currentAnalysis);
+    manualMode=false;manualPoints=[];$('manualHelp').classList.add('hidden');enableButtons();autoProcess();
+  }catch(err){$('engineStatus').textContent='画像の読み込みに失敗しました。';$('engineStatus').className='status err'}
+});
+
+$('autoBtn').addEventListener('click',autoProcess);
+$('manualBtn').addEventListener('click',()=>{
+  if(!currentAnalysis)return;manualMode=true;manualPoints=[];$('manualHelp').classList.remove('hidden');redrawSourceMarkers();
+  $('engineStatus').textContent='A3用紙の四隅を4回クリックしてください。';$('engineStatus').className='status warn';
+});
+$('resetBtn').addEventListener('click',()=>{
+  manualMode=false;manualPoints=[];$('manualHelp').classList.add('hidden');$('resultCard').classList.add('hidden');
+  if(currentAnalysis)copyAnalysisToSource(currentAnalysis);
+  warpCanvas.getContext('2d').clearRect(0,0,CANON_W,CANON_H);
+  $('engineStatus').textContent='オフライン採点エンジン準備完了。';$('engineStatus').className='status ok';
+});
+
+sourceCanvas.addEventListener('click',e=>{
+  if(!manualMode||!currentAnalysis)return;
+  const r=sourceCanvas.getBoundingClientRect();
+  const x=(e.clientX-r.left)*sourceCanvas.width/r.width,y=(e.clientY-r.top)*sourceCanvas.height/r.height;
+  manualPoints.push([x,y]);redrawSourceMarkers();
+  if(manualPoints.length===4){
+    manualMode=false;$('manualHelp').classList.add('hidden');
+    const q=orderQuad(manualPoints),team=detectTeamNumber(currentAnalysis),t0=performance.now();
+    const warped=warpPerspective(currentAnalysis.imageData,currentAnalysis.w,currentAnalysis.h,q);
+    const result=scoreWarped(warped);renderParticipant(result,team,warped,(performance.now()-t0),'手動A3指定');
+  }
+});
+
+function redrawSourceMarkers(){
+  if(!currentAnalysis)return;
+  sourceCanvas.getContext('2d').putImageData(currentAnalysis.imageData,0,0);
+  if(!manualPoints.length)return;
+  const ctx=sourceCanvas.getContext('2d');ctx.save();ctx.lineWidth=3;ctx.strokeStyle='#ff3b30';ctx.fillStyle='#ff3b30';ctx.font='bold 18px sans-serif';
+  manualPoints.forEach((p,i)=>{ctx.beginPath();ctx.arc(p[0],p[1],7,0,Math.PI*2);ctx.stroke();ctx.fillText(String(i+1),p[0]+9,p[1]-8)});
+  ctx.restore();
+}
+
+function autoProcess(){
+  if(!currentAnalysis)return;
+  const t0=performance.now(),team=detectTeamNumber(currentAnalysis),a3=detectA3Quad(currentAnalysis);
+  if(!a3){
+    $('engineStatus').textContent='A3シートを自動検出できませんでした。四隅を手動指定してください。';$('engineStatus').className='status warn';return;
+  }
+  drawQuad(a3.quad);
+  const warped=warpPerspective(currentAnalysis.imageData,currentAnalysis.w,currentAnalysis.h,a3.quad),result=scoreWarped(warped);
+  result.a3=a3;
+  renderParticipant(result,team,warped,(performance.now()-t0),'自動A3検出');
+}
+
+function drawQuad(q){
+  sourceCanvas.getContext('2d').putImageData(currentAnalysis.imageData,0,0);
+  const ctx=sourceCanvas.getContext('2d');ctx.save();ctx.lineWidth=3;ctx.strokeStyle='#00b84a';ctx.beginPath();ctx.moveTo(q[0][0],q[0][1]);
+  for(let i=1;i<4;i++)ctx.lineTo(q[i][0],q[i][1]);ctx.closePath();ctx.stroke();ctx.restore();
+}
+
+/* ---------- lightweight image engine ---------- */
+function dilate3(src,w,h){
+  const out=new Uint8Array(src.length);
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+    const i=y*w+x;
+    if(src[i]||src[i-1]||src[i+1]||src[i-w]||src[i+w]||src[i-w-1]||src[i-w+1]||src[i+w-1]||src[i+w+1])out[i]=1;
+  }
+  return out;
+}
+function erode3(src,w,h){
+  const out=new Uint8Array(src.length);
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+    const i=y*w+x;
+    if(src[i]&&src[i-1]&&src[i+1]&&src[i-w]&&src[i+w]&&src[i-w-1]&&src[i-w+1]&&src[i+w-1]&&src[i+w+1])out[i]=1;
+  }
+  return out;
+}
+function closeMask(src,w,h,iters=1){
+  let a=src;
+  for(let i=0;i<iters;i++)a=dilate3(a,w,h);
+  for(let i=0;i<iters;i++)a=erode3(a,w,h);
+  return a;
+}
+function connectedComponents(mask,w,h,restrictW=w,restrictH=h){
+  const labels=new Int32Array(w*h),queue=new Int32Array(w*h),items=[];let id=0;
+  const dx=[-1,0,1,-1,1,-1,0,1],dy=[-1,-1,-1,0,0,1,1,1];
+  for(let y=0;y<restrictH;y++)for(let x=0;x<restrictW;x++){
+    const start=y*w+x;if(!mask[start]||labels[start])continue;
+    id++;let head=0,tail=0;queue[tail++]=start;labels[start]=id;
+    let area=0,minx=x,maxx=x,miny=y,maxy=y,sumx=0,sumy=0;
+    while(head<tail){
+      const p=queue[head++],py=Math.floor(p/w),px=p-py*w;area++;sumx+=px;sumy+=py;
+      if(px<minx)minx=px;if(px>maxx)maxx=px;if(py<miny)miny=py;if(py>maxy)maxy=py;
+      for(let k=0;k<8;k++){
+        const nx=px+dx[k],ny=py+dy[k];if(nx<0||ny<0||nx>=restrictW||ny>=restrictH)continue;
+        const ni=ny*w+nx;if(mask[ni]&&!labels[ni]){labels[ni]=id;queue[tail++]=ni}
+      }
+    }
+    items.push({id,area,minx,maxx,miny,maxy,w:maxx-minx+1,h:maxy-miny+1,cx:sumx/area,cy:sumy/area});
+  }
+  return {labels,items};
+}
+function convexHull(points){
+  if(points.length<=1)return points.slice();
+  const pts=points.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]),cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lower=[];for(const p of pts){while(lower.length>=2&&cross(lower[lower.length-2],lower[lower.length-1],p)<=0)lower.pop();lower.push(p)}
+  const upper=[];for(let i=pts.length-1;i>=0;i--){const p=pts[i];while(upper.length>=2&&cross(upper[upper.length-2],upper[upper.length-1],p)<=0)upper.pop();upper.push(p)}
+  lower.pop();upper.pop();return lower.concat(upper);
+}
+function orderQuad(pts){
+  let tl=pts[0],tr=pts[0],br=pts[0],bl=pts[0];
+  for(const p of pts){
+    if(p[0]+p[1]<tl[0]+tl[1])tl=p;if(p[0]+p[1]>br[0]+br[1])br=p;
+    if(p[1]-p[0]<tr[1]-tr[0])tr=p;if(p[1]-p[0]>bl[1]-bl[0])bl=p;
+  }
+  return [tl,tr,br,bl];
+}
+function detectA3Quad(a){
+  const {w,h,gray}=a,N=w*h;let white=new Uint8Array(N);
+  for(let i=0;i<N;i++)if(gray[i]>145)white[i]=1;
+  white=closeMask(white,w,h,3);
+  const cc=connectedComponents(white,w,h);let best=null;
+  for(const c of cc.items){
+    const ratio=c.area/N,fill=c.area/(c.w*c.h),ar=c.w/c.h;
+    if(ratio<.08||ratio>.50||c.w<.25*w||c.h<.25*h)continue;
+    const score=2*fill-.2*Math.abs(c.cx/w-.55)-.2*Math.abs(c.cy/h-.62)-.1*Math.abs(Math.log(Math.max(ar,.01)/.707));
+    if(!best||score>best.score)best={...c,score};
+  }
+  if(!best)return null;
+  const pts=[];
+  for(let y=best.miny;y<=best.maxy;y++){
+    let lx=-1,rx=-1;
+    for(let x=best.minx;x<=best.maxx;x++)if(cc.labels[y*w+x]===best.id){lx=x;break}
+    for(let x=best.maxx;x>=best.minx;x--)if(cc.labels[y*w+x]===best.id){rx=x;break}
+    if(lx>=0){pts.push([lx,y]);if(rx!==lx)pts.push([rx,y])}
+  }
+  const hull=convexHull(pts);if(hull.length<4)return null;
+  const q=orderQuad(hull),polyArea=Math.abs(q.reduce((s,p,i)=>{const n=q[(i+1)%4];return s+p[0]*n[1]-n[0]*p[1]},0))/2;
+  if(polyArea<.10*N)return null;
+  return {quad:q,score:best.score,areaRatio:polyArea/N};
+}
+
+function solveLinear(A,b){
+  const n=b.length,M=A.map((r,i)=>r.slice().concat([b[i]]));
+  for(let col=0;col<n;col++){
+    let pivot=col;for(let r=col+1;r<n;r++)if(Math.abs(M[r][col])>Math.abs(M[pivot][col]))pivot=r;
+    if(Math.abs(M[pivot][col])<1e-10)throw new Error('射影変換を計算できません');
+    [M[col],M[pivot]]=[M[pivot],M[col]];
+    const d=M[col][col];for(let j=col;j<=n;j++)M[col][j]/=d;
+    for(let r=0;r<n;r++)if(r!==col){const f=M[r][col];if(!f)continue;for(let j=col;j<=n;j++)M[r][j]-=f*M[col][j]}
+  }
+  return M.map(r=>r[n]);
+}
+function homographyDestToSource(q){
+  const dst=[[0,0],[CANON_W-1,0],[CANON_W-1,CANON_H-1],[0,CANON_H-1]],A=[],b=[];
+  for(let i=0;i<4;i++){
+    const [x,y]=dst[i],[u,v]=q[i];
+    A.push([x,y,1,0,0,0,-u*x,-u*y]);b.push(u);
+    A.push([0,0,0,x,y,1,-v*x,-v*y]);b.push(v);
+  }
+  return solveLinear(A,b);
+}
+function warpPerspective(srcData,sw,sh,q){
+  const H=homographyDestToSource(q),out=new ImageData(CANON_W,CANON_H),s=srcData.data,d=out.data;
+  for(let y=0;y<CANON_H;y++)for(let x=0;x<CANON_W;x++){
+    const den=H[6]*x+H[7]*y+1,u=(H[0]*x+H[1]*y+H[2])/den,v=(H[3]*x+H[4]*y+H[5])/den;
+    const di=(y*CANON_W+x)*4;
+    if(u<0||v<0||u>=sw-1||v>=sh-1){d[di]=d[di+1]=d[di+2]=255;d[di+3]=255;continue}
+    const x0=Math.floor(u),y0=Math.floor(v),fx=u-x0,fy=v-y0,i00=(y0*sw+x0)*4,i10=i00+4,i01=i00+sw*4,i11=i01+4;
+    for(let c=0;c<3;c++)d[di+c]=Math.round(s[i00+c]*(1-fx)*(1-fy)+s[i10+c]*fx*(1-fy)+s[i01+c]*(1-fx)*fy+s[i11+c]*fx*fy);
+    d[di+3]=255;
+  }
+  return out;
+}
+function hsv180(r,g,b){
+  const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;let h=0;
+  if(delta){
+    if(max===r)h=60*(((g-b)/delta)%6);else if(max===g)h=60*((b-r)/delta+2);else h=60*((r-g)/delta+4);
+    if(h<0)h+=360;
+  }
+  return [h/2,max?255*delta/max:0,max];
+}
+function pointsForComp(labels,c,w){
+  const pts=[];
+  for(let y=c.miny;y<=c.maxy;y++)for(let x=c.minx;x<=c.maxx;x++)if(labels[y*w+x]===c.id)pts.push([x,y]);
+  return pts;
+}
+function pcaAxes(pts){
+  let mx=0,my=0;for(const p of pts){mx+=p[0];my+=p[1]}mx/=pts.length;my/=pts.length;
+  let sxx=0,syy=0,sxy=0;for(const p of pts){const dx=p[0]-mx,dy=p[1]-my;sxx+=dx*dx;syy+=dy*dy;sxy+=dx*dy}
+  const theta=.5*Math.atan2(2*sxy,sxx-syy),major=[Math.cos(theta),Math.sin(theta)],minor=[-Math.sin(theta),Math.cos(theta)];
+  return {center:[mx,my],major,minor};
+}
+function angleDeg(v){return (Math.atan2(v[1],v[0])*180/Math.PI+360)%360}
+function std(arr){if(!arr.length)return 0;const m=arr.reduce((s,x)=>s+x,0)/arr.length;return Math.sqrt(arr.reduce((s,x)=>s+(x-m)*(x-m),0)/arr.length)}
+function eyeOrientation(pts){
+  const p=pcaAxes(pts),u=p.major,v=[-u[1],u[0]],a=[],b=[];let lo=Infinity,hi=-Infinity;
+  for(const pt of pts){const dx=pt[0]-p.center[0],dy=pt[1]-p.center[1],aa=dx*u[0]+dy*u[1],bb=dx*v[0]+dy*v[1];a.push(aa);b.push(bb);if(aa<lo)lo=aa;if(aa>hi)hi=aa}
+  const cut=(hi-lo)*.28,neg=[],pos=[];for(let i=0;i<a.length;i++){if(a[i]<lo+cut)neg.push(b[i]);if(a[i]>hi-cut)pos.push(b[i])}
+  const sn=std(neg)+.015*neg.length,sp=std(pos)+.015*pos.length,dir=sp>=sn?u:[-u[0],-u[1]];
+  return {center:p.center,angle:angleDeg(dir),confidence:Math.abs(sp-sn)/Math.max(1,sp,sn)};
+}
+function groupPoints(labels,selected,w,h){
+  const ids=new Set(selected.map(c=>c.id)),minx=Math.min(...selected.map(c=>c.minx)),maxx=Math.max(...selected.map(c=>c.maxx)),miny=Math.min(...selected.map(c=>c.miny)),maxy=Math.max(...selected.map(c=>c.maxy)),pts=[];
+  for(let y=miny;y<=maxy;y++)for(let x=minx;x<=maxx;x++)if(ids.has(labels[y*w+x]))pts.push([x,y]);
+  return {pts,minx,maxx,miny,maxy};
+}
+function scoreWarped(imageData){
+  const d=imageData.data,N=CANON_W*CANON_H,black=new Uint8Array(N),orange0=new Uint8Array(N),red=new Uint8Array(N);
+  for(let i=0,j=0;i<d.length;i+=4,j++){
+    const [h,s,v]=hsv180(d[i],d[i+1],d[i+2]);
+    if(s<100&&v<130)black[j]=1;
+    if(h>=8&&h<=35&&s>80&&v>90)orange0[j]=1;
+    if((h<=10||h>=170)&&s>140&&v>70)red[j]=1;
+  }
+  const orange=closeMask(orange0,CANON_W,CANON_H,1),warnings=[];
+  const bc=connectedComponents(black,CANON_W,CANON_H),eyes=[];
+  for(const c of bc.items){
+    const mn=Math.min(c.w,c.h),mx=Math.max(c.w,c.h),ar=mx/Math.max(1,mn),fill=c.area/(c.w*c.h);
+    if(c.area>425&&mx<140&&mn>25&&mx>38&&ar<4.0&&fill<.68){
+      const pts=pointsForComp(bc.labels,c,CANON_W),o=eyeOrientation(pts),touch=c.minx<=1||c.miny<=1||c.maxx>=CANON_W-2||c.maxy>=CANON_H-2;
+      eyes.push({...c,...o,touch});
+    }
+  }
+  eyes.sort((a,b)=>b.area-a.area);while(eyes.length>2)eyes.pop();
+  if(eyes.length<2)warnings.push(`目を${eyes.length}個しか検出できませんでした。`);
+
+  const oc=connectedComponents(orange,CANON_W,CANON_H),ocs=oc.items.filter(c=>c.area>30).sort((a,b)=>b.area-a.area);
+  let nose=null;
+  if(ocs.length){
+    const sel=[ocs[0]];for(const c of ocs.slice(1,4))if(Math.hypot(c.cx-ocs[0].cx,c.cy-ocs[0].cy)<75)sel.push(c);
+    const gp=groupPoints(oc.labels,sel,CANON_W,CANON_H);
+    if(gp.pts.length>100){
+      const p=pcaAxes(gp.pts),u=p.minor,a=[];let lo=Infinity,hi=-Infinity;
+      for(const pt of gp.pts){const z=(pt[0]-p.center[0])*u[0]+(pt[1]-p.center[1])*u[1];a.push(z);if(z<lo)lo=z;if(z>hi)hi=z}
+      const cut=(hi-lo)*.18,nlo=a.filter(x=>x<lo+cut).length,nhi=a.filter(x=>x>hi-cut).length,dir=nhi<nlo?u:[-u[0],-u[1]];
+      nose={center:p.center,angle:angleDeg(dir),area:gp.pts.length,touch:gp.minx<=1||gp.miny<=1||gp.maxx>=CANON_W-2||gp.maxy>=CANON_H-2};
+    }
+  }
+  if(!nose)warnings.push('鼻を検出できませんでした。');
+
+  const rc=connectedComponents(red,CANON_W,CANON_H),rcs=rc.items.filter(c=>c.area>50).sort((a,b)=>b.area-a.area);
+  let mouth=null;
+  if(rcs.length){
+    const sel=[rcs[0]];for(const c of rcs.slice(1,5))if(Math.hypot(c.cx-rcs[0].cx,c.cy-rcs[0].cy)<80)sel.push(c);
+    const gp=groupPoints(rc.labels,sel,CANON_W,CANON_H);
+    if(gp.pts.length>120){
+      let mx=0,my=0;for(const p of gp.pts){mx+=p[0];my+=p[1]}mx/=gp.pts.length;my/=gp.pts.length;
+      let dx=rcs[0].cx-mx,dy=rcs[0].cy-my;
+      if(Math.hypot(dx,dy)<1){const p=pcaAxes(gp.pts);dx=p.minor[0];dy=p.minor[1]}
+      mouth={center:[mx,my],angle:angleDeg([dx,dy]),area:gp.pts.length,touch:gp.minx<=1||gp.miny<=1||gp.maxx>=CANON_W-2||gp.maxy>=CANON_H-2};
+    }
+  }
+  if(!mouth)warnings.push('口を検出できませんでした。');
+
+  for(const e of eyes){if(e.area<REF_AREA.eye*.55)warnings.push('目の一部が他パーツに隠れている可能性があります。');if(e.touch)warnings.push('目がA3境界に接触しています。')}
+  if(nose){if(nose.area<REF_AREA.nose*.60)warnings.push('鼻の一部が他パーツに隠れている可能性があります。');if(nose.touch)warnings.push('鼻がA3境界に接触しています。')}
+  if(mouth){if(mouth.area<REF_AREA.mouth*.60)warnings.push('口の一部が他パーツに隠れている可能性があります。');if(mouth.touch)warnings.push('口がA3境界に接触しています。')}
+
+  function angleDiff(a,b){return Math.abs(((a-b+180)%360+360)%360-180)}
+  function scoreOne(det,t){
+    if(!det)return {placed:0,posPts:0,angPts:0,total:0,dist:null,angDiff:null,det:null};
+    const dist=Math.hypot(det.center[0]-t.center[0],det.center[1]-t.center[1])/PX_PER_MM,posPts=SCORE_POS*Math.max(0,1-dist/POS_ZERO_MM);
+    const ad=angleDiff(det.angle,t.angle),angPts=SCORE_ANGLE*Math.max(0,1-ad/ANGLE_ZERO_DEG);
+    return {placed:SCORE_PLACE,posPts,angPts,total:SCORE_PLACE+posPts+angPts,dist,angDiff:ad,det};
+  }
+  let eyeL,eyeR;
+  if(eyes.length===2){
+    const aL=scoreOne(eyes[0],TARGETS.eyeL),aR=scoreOne(eyes[1],TARGETS.eyeR),bL=scoreOne(eyes[1],TARGETS.eyeL),bR=scoreOne(eyes[0],TARGETS.eyeR);
+    if(aL.total+aR.total>=bL.total+bR.total){eyeL=aL;eyeR=aR}else{eyeL=bL;eyeR=bR}
+  }else if(eyes.length===1){
+    const l=scoreOne(eyes[0],TARGETS.eyeL),r=scoreOne(eyes[0],TARGETS.eyeR);
+    if(l.total>=r.total){eyeL=l;eyeR=scoreOne(null,TARGETS.eyeR)}else{eyeL=scoreOne(null,TARGETS.eyeL);eyeR=r}
+  }else{eyeL=scoreOne(null,TARGETS.eyeL);eyeR=scoreOne(null,TARGETS.eyeR)}
+  const parts={eyeL,eyeR,nose:scoreOne(nose,TARGETS.nose),mouth:scoreOne(mouth,TARGETS.mouth)};
+  return {parts,total:Object.values(parts).reduce((s,p)=>s+p.total,0),warnings,eyes,nose,mouth};
+}
+
+/* ---------- Team number 1-9 ---------- */
+function normalizeDigit(labels,c,w){
+  const W=64,H=96,out=new Uint8Array(W*H),sc=Math.min((W-8)/c.w,(H-8)/c.h),rw=Math.max(1,Math.round(c.w*sc)),rh=Math.max(1,Math.round(c.h*sc)),ox=Math.floor((W-rw)/2),oy=Math.floor((H-rh)/2);
+  for(let yy=0;yy<rh;yy++)for(let xx=0;xx<rw;xx++){
+    const sx=c.minx+Math.min(c.w-1,Math.floor(xx/sc)),sy=c.miny+Math.min(c.h-1,Math.floor(yy/sc));
+    if(labels[sy*w+sx]===c.id)out[(oy+yy)*W+(ox+xx)]=1;
+  }
+  return out;
+}
+function shiftedIoU(a,b,dx,dy){
+  const W=64,H=96;let inter=0,uni=0;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const sx=x-dx,sy=y-dy,av=(sx>=0&&sx<W&&sy>=0&&sy<H)?a[sy*W+sx]:0,bv=b[y*W+x];
+    if(av&&bv)inter++;if(av||bv)uni++;
+  }return uni?inter/uni:0;
+}
+function classifyDigit(mask){
+  let bestN=null,best=-1,second=-1;
+  for(let n=1;n<=9;n++){
+    let s=0;const t=digitTemplates[n];
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)s=Math.max(s,shiftedIoU(mask,t,dx,dy));
+    if(s>best){second=best;best=s;bestN=n}else if(s>second)second=s;
+  }
+  return {team:bestN,similarity:best,confidence:best-Math.max(0,second)};
+}
+function detectTeamNumber(a){
+  const rw=Math.floor(a.w*.42),rh=Math.floor(a.h*.42),mask=new Uint8Array(a.w*a.h);
+  for(let y=0;y<rh;y++)for(let x=0;x<rw;x++)if(a.gray[y*a.w+x]<105)mask[y*a.w+x]=1;
+  const cc=connectedComponents(mask,a.w,a.h,rw,rh),cands=[];
+  for(const c of cc.items){
+    if(c.area<20||c.h<15||c.w<3||c.h>.18*a.h||c.w>.15*a.w)continue;
+    const ratio=c.h/c.w,fill=c.area/(c.w*c.h);if(ratio<.7||ratio>6||fill<.08||fill>.8)continue;
+    const norm=normalizeDigit(cc.labels,c,a.w),cl=classifyDigit(norm),quality=cl.similarity+.3*cl.confidence+.1*ratio;
+    cands.push({...cl,quality,c});
+  }
+  cands.sort((x,y)=>y.quality-x.quality);if(!cands.length)return null;
+  const b=cands[0];b.lowConfidence=b.similarity<.50||b.confidence<.12;return b;
+}
+
+/* ---------- render ---------- */
+function fmt(n,d=2){return n==null?'—':Number(n).toFixed(d)}
+function partState(p){if(!p.det)return'<span class="bad">未検出</span>';return p.det.touch?'<span class="edge">境界接触</span>':'<span class="good">OK</span>'}
+function renderParticipant(res,team,warped,ms,mode){
+  warpCanvas.width=CANON_W;warpCanvas.height=CANON_H;warpCanvas.getContext('2d').putImageData(warped,0,0);
+  const body=$('resultBody');body.innerHTML='';
+  for(const[k,label]of[['eyeL','左目'],['eyeR','右目'],['nose','鼻'],['mouth','口']]){
+    const p=res.parts[k],tr=document.createElement('tr');
+    tr.innerHTML=`<td>${label}</td><td>${partState(p)}</td><td>${fmt(p.placed)}</td><td>${p.dist==null?'—':fmt(p.dist,1)+' mm'}</td><td>${fmt(p.posPts)}</td><td>${p.angDiff==null?'—':fmt(p.angDiff,1)+'°'}</td><td>${fmt(p.angPts)}</td><td><strong>${fmt(p.total)}</strong></td>`;body.appendChild(tr);
+  }
+  $('totalScore').innerHTML=`${fmt(res.total)} <small>/ 30.00</small>`;
+  $('teamGuess').textContent=team?`エントリー番号推定: ${team.team}（類似度 ${(team.similarity*100).toFixed(0)}%、信頼差 ${(team.confidence*100).toFixed(0)}%${team.lowConfidence?' / 要確認':''}）`:'エントリー番号: 自動認識できませんでした';
+  $('perf').textContent=`${mode} ／ 処理時間 ${ms.toFixed(0)} ms（この端末）`;
+  const ul=$('warnings');ul.innerHTML='';if(!res.warnings.length){const li=document.createElement('li');li.textContent='判定保留事項はありません。';ul.appendChild(li)}else res.warnings.forEach(w=>{const li=document.createElement('li');li.textContent=w;ul.appendChild(li)});
+  $('debugText').textContent=JSON.stringify({team,a3:res.a3||null,eyes:res.eyes.map(e=>({center:e.center.map(v=>+v.toFixed(1)),angle:+e.angle.toFixed(1),area:e.area})),nose:res.nose?{center:res.nose.center.map(v=>+v.toFixed(1)),angle:+res.nose.angle.toFixed(1),area:res.nose.area}:null,mouth:res.mouth?{center:res.mouth.center.map(v=>+v.toFixed(1)),angle:+res.mouth.angle.toFixed(1),area:res.mouth.area}:null},null,2);
+  $('resultCard').classList.remove('hidden');drawOverlay(res);$('engineStatus').textContent='採点完了。';$('engineStatus').className='status ok';
+}
+function drawOverlay(res){
+  const ctx=warpCanvas.getContext('2d');ctx.save();ctx.lineWidth=2;ctx.font='bold 12px sans-serif';
+  for(const t of Object.values(TARGETS)){ctx.strokeStyle='#00a650';ctx.beginPath();ctx.arc(t.center[0],t.center[1],5,0,Math.PI*2);ctx.stroke()}
+  const draw=(p,label)=>{if(!p||!p.det)return;const d=p.det;ctx.strokeStyle='#ff3b30';ctx.fillStyle='#ff3b30';ctx.beginPath();ctx.arc(d.center[0],d.center[1],5,0,Math.PI*2);ctx.stroke();const len=24,a=d.angle*Math.PI/180;ctx.beginPath();ctx.moveTo(d.center[0],d.center[1]);ctx.lineTo(d.center[0]+Math.cos(a)*len,d.center[1]+Math.sin(a)*len);ctx.stroke();ctx.fillText(label,d.center[0]+7,d.center[1]-7)};
+  draw(res.parts.eyeL,'L');draw(res.parts.eyeR,'R');draw(res.parts.nose,'N');draw(res.parts.mouth,'M');ctx.restore();
+}
+
+/* ---------- judge mode ---------- */
+$('batchInput').addEventListener('change',e=>{
+  batchFiles=[...(e.target.files||[])].slice(0,9);
+  $('batchStatus').textContent=batchFiles.length?`${batchFiles.length}枚を選択しました。`:'画像を選択してください。';
+  $('batchStatus').className='status';enableButtons();
+});
+$('batchBtn').addEventListener('click',processBatch);
+$('batchResetBtn').addEventListener('click',()=>{
+  batchFiles=[];batchResults=[];$('batchInput').value='';
+  $('batchResultCard').classList.add('hidden');$('comparisonCard').classList.add('hidden');
+  $('csvBtn').disabled=true;$('batchProgress').style.width='0';
+  $('batchStatus').textContent='画像を選択してください。';enableButtons();
+});
+$('csvBtn').addEventListener('click',downloadCSV);
+$('refreshComparisonBtn').addEventListener('click',generateComparisonImage);
+$('downloadPngBtn').addEventListener('click',downloadComparisonPNG);
+$('closeDialogBtn').addEventListener('click',()=>$('scoreDialog').close());
+$('saveManualBtn').addEventListener('click',saveManualScores);
+$('resetManualBtn').addEventListener('click',resetManualScores);
+$('batchSort').addEventListener('change',()=>renderBatch());
+
+let editRowId=null;
+
+function inferTeamFromFilename(name){
+  let m=name.match(/(?:team|no|entry)[ _-]*([1-9])/i);if(m)return Number(m[1]);
+  m=name.match(/^([1-9])(?:\D|$)/);return m?Number(m[1]):null;
+}
+function batchMetrics(res){
+  const ps=Object.values(res.parts),detected=ps.filter(p=>p.det).length,
+    posSum=ps.reduce((s,p)=>s+(p.dist==null?POS_ZERO_MM:p.dist),0),
+    nose=res.parts.nose.dist==null?POS_ZERO_MM:res.parts.nose.dist;
+  return{detected,posSum,nose};
+}
+function imageDataToThumbnail(imageData){
+  const c=document.createElement('canvas');c.width=CANON_W;c.height=CANON_H;c.getContext('2d').putImageData(imageData,0,0);
+  const out=document.createElement('canvas');out.width=118;out.height=168;out.getContext('2d').drawImage(c,0,0,out.width,out.height);
+  return out.toDataURL('image/jpeg',0.82);
+}
+async function processBatch(){
+  if(!batchFiles.length)return;
+  batchResults=[];$('batchBtn').disabled=true;$('csvBtn').disabled=true;
+  $('batchResultCard').classList.add('hidden');$('comparisonCard').classList.add('hidden');$('batchProgress').style.width='0';
+  const t0=performance.now();
+  for(let i=0;i<batchFiles.length;i++){
+    const file=batchFiles[i];$('batchStatus').textContent=`採点中 ${i+1}/${batchFiles.length}: ${file.name}`;
+    const row={id:i,file:file.name,error:null,team:null,teamInfo:null,result:null,metrics:null,thumb:null,manual:null};
+    try{
+      const img=await loadImageFile(file),a=prepareAnalysis(img),team=detectTeamNumber(a),a3=detectA3Quad(a);
+      row.teamInfo=team;row.team=(team&&!team.lowConfidence?team.team:null)||inferTeamFromFilename(file.name);
+      if(!a3)throw new Error('A3自動検出失敗');
+      const warped=warpPerspective(a.imageData,a.w,a.h,a3.quad),result=scoreWarped(warped);
+      result.a3=a3;row.result=result;row.metrics=batchMetrics(result);row.thumb=imageDataToThumbnail(warped);
+    }catch(e){row.error=e.message||String(e)}
+    batchResults.push(row);$('batchProgress').style.width=`${((i+1)/batchFiles.length)*100}%`;
+    await new Promise(r=>setTimeout(r,0));
+  }
+  const sec=(performance.now()-t0)/1000;
+  $('batchStatus').textContent=`${batchFiles.length}枚の処理完了：${sec.toFixed(2)}秒`;
+  $('batchStatus').className='status ok';$('batchBtn').disabled=false;$('csvBtn').disabled=false;
+  renderBatch();
+}
+function getFinalParts(row){
+  return row.manual?.parts || row.result?.parts || null;
+}
+function getFinalTotal(row){
+  if(!row.result)return 0;
+  if(row.manual)return Object.values(row.manual.parts).reduce((s,p)=>s+p.total,0);
+  return row.result.total;
+}
+function getRowStatus(row){
+  if(row.error)return 'ERROR';
+  if(row.manual)return 'MANUAL';
+  if(!row.team || row.teamInfo?.lowConfidence || (row.result?.warnings?.length||0)>0)return 'CHECK';
+  return 'OK';
+}
+function rankedRows(){
+  const ok=batchResults.filter(r=>r.result&&!r.error);
+  ok.sort((a,b)=>(getFinalTotal(b)-getFinalTotal(a))||(a.metrics.posSum-b.metrics.posSum)||(b.metrics.detected-a.metrics.detected)||(a.metrics.nose-b.metrics.nose)||((a.team||99)-(b.team||99)));
+  return ok;
+}
+function statusPriority(row){
+  const s=getRowStatus(row);
+  return s==='CHECK'?0:s==='ERROR'?1:s==='MANUAL'?2:3;
+}
+function displayRows(){
+  const mode=$('batchSort')?.value||'rank';
+  const ranked=rankedRows(),rankIndex=new Map(ranked.map((r,i)=>[r.id,i]));
+  const rows=batchResults.slice();
+  if(mode==='upload')return rows;
+  if(mode==='team')return rows.sort((a,b)=>((a.team??99)-(b.team??99))||((rankIndex.get(a.id)??99)-(rankIndex.get(b.id)??99)));
+  if(mode==='scoreDesc')return rows.sort((a,b)=>{
+    if(a.error!==b.error)return a.error?1:-1;
+    return getFinalTotal(b)-getFinalTotal(a);
+  });
+  if(mode==='scoreAsc')return rows.sort((a,b)=>{
+    if(a.error!==b.error)return a.error?1:-1;
+    return getFinalTotal(a)-getFinalTotal(b);
+  });
+  if(mode==='status')return rows.sort((a,b)=>statusPriority(a)-statusPriority(b)||((rankIndex.get(a.id)??99)-(rankIndex.get(b.id)??99)));
+  return ranked.concat(rows.filter(r=>!rankIndex.has(r.id)));
+}
+function sortLabel(){
+  const labels={rank:'順位順',team:'Team番号順',scoreDesc:'得点 高い順',scoreAsc:'得点 低い順',status:'要確認を先頭',upload:'アップロード順'};
+  return labels[$('batchSort')?.value||'rank']||'順位順';
+}
+function teamSelectHtml(row){
+  let s=`<select class="team-select" data-id="${row.id}"><option value="">?</option>`;
+  for(let n=1;n<=9;n++)s+=`<option value="${n}" ${row.team===n?'selected':''}>${n}</option>`;
+  return s+'</select>';
+}
+function renderBatch(){
+  const ranked=rankedRows(),rankMap=new Map(ranked.map((r,i)=>[r.id,i+1])),body=$('batchBody');body.innerHTML='';
+  for(const row of displayRows()){
+    const tr=document.createElement('tr'),rnk=rankMap.get(row.id)||'—',status=getRowStatus(row);
+    if(row.error){
+      tr.innerHTML=`<td>${rnk}</td><td>${teamSelectHtml(row)}</td><td class="left">${row.file}</td><td>—</td><td>—</td><td colspan="4">—</td><td><span class="bad">${row.error}</span></td><td>—</td>`;
+    }else{
+      const ti=row.teamInfo,recogn=ti?`${ti.team} / ${(ti.similarity*100).toFixed(0)}%${ti.lowConfidence?' 要確認':''}`:'未認識',
+        p=getFinalParts(row),statusHtml=status==='MANUAL'?'<span class="manual-badge">手動補正</span>':status==='CHECK'?'<span class="check-badge">要確認</span>':'<span class="good">OK</span>',
+        btnClass=status==='CHECK'?'check':status==='MANUAL'?'manual':'';
+      tr.innerHTML=`<td class="${rnk<=3?'rank'+rnk:''}">${rnk}</td><td>${teamSelectHtml(row)}</td><td class="left">${row.file}</td><td>${recogn}</td>
+        <td><strong>${fmt(getFinalTotal(row))}</strong>${row.manual?'<br><span class="small">自動 '+fmt(row.result.total)+'</span>':''}</td>
+        <td>${fmt(p.eyeL.total)}</td><td>${fmt(p.eyeR.total)}</td><td>${fmt(p.nose.total)}</td><td>${fmt(p.mouth.total)}</td>
+        <td>${statusHtml}</td><td><button class="edit-btn ${btnClass}" data-edit="${row.id}">${status==='CHECK'?'点数確認・修正':'編集'}</button></td>`;
+    }
+    body.appendChild(tr);
+  }
+  document.querySelectorAll('.team-select').forEach(sel=>sel.addEventListener('change',e=>{
+    const row=batchResults.find(r=>r.id===Number(e.target.dataset.id));row.team=e.target.value?Number(e.target.value):null;renderBatch();
+  }));
+  document.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click',()=>openScoreEditor(Number(btn.dataset.edit))));
+  updateDuplicates();
+  const top=ranked.slice(0,3);
+  $('podium').innerHTML=top.length?top.map((r,i)=>`${i+1}位：Team ${r.team??'?'}　<strong>${fmt(getFinalTotal(r))}点</strong>${r.manual?' <span class="manual-badge">手動補正</span>':''}`).join('　 /　 '):'採点可能な結果がありません。';
+  $('batchResultCard').classList.remove('hidden');
+  publishCompetitionResults();
+  if(batchResults.length){generateComparisonImage();}
+}
+function updateDuplicates(){
+  const counts={};for(const r of batchResults)if(r.team)counts[r.team]=(counts[r.team]||0)+1;
+  const dup=Object.entries(counts).filter(([,c])=>c>1).map(([n])=>n),box=$('duplicateWarning');
+  document.querySelectorAll('.team-select').forEach(sel=>sel.classList.toggle('duplicate',dup.includes(sel.value)));
+  if(dup.length){box.textContent=`重複したTeam番号があります：${dup.join(', ')}。表のプルダウンで修正してください。`;box.className='status warn'}else box.className='status hidden';
+}
+function clamp(v,min,max){const n=Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):min}
+function editInputId(part,kind){return `edit_${part}_${kind}`}
+function openScoreEditor(id){
+  const row=batchResults.find(r=>r.id===id);if(!row||!row.result)return;editRowId=id;
+  $('editTitle').textContent=`Team ${row.team??'?'} / ${row.file} — 点数確認・修正`;
+  $('editReason').value=row.manual?.reason||'';
+  const tbody=$('editScoreBody');tbody.innerHTML='';
+  for(const [key,label] of [['eyeL','左目'],['eyeR','右目'],['nose','鼻'],['mouth','口']]){
+    const auto=row.result.parts[key],cur=row.manual?.parts?.[key]||auto,tr=document.createElement('tr');
+    tr.innerHTML=`<td>${label}</td><td>${fmt(auto.total)}</td>
+      <td><select class="score-input manual-field" id="${editInputId(key,'placed')}" data-part="${key}">
+        <option value="5.25" ${cur.placed>=2.625?'selected':''}>5.25</option>
+        <option value="0" ${cur.placed<2.625?'selected':''}>0.00</option>
+      </select></td>
+      <td><input class="score-input manual-field" id="${editInputId(key,'posPts')}" data-part="${key}" type="number" min="0" max="1.8" step="0.01" value="${Number(cur.posPts).toFixed(2)}"></td>
+      <td><input class="score-input manual-field" id="${editInputId(key,'angPts')}" data-part="${key}" type="number" min="0" max="0.45" step="0.01" value="${Number(cur.angPts).toFixed(2)}"></td>
+      <td id="${editInputId(key,'total')}"><strong>${fmt(cur.placed+cur.posPts+cur.angPts)}</strong></td>`;
+    tbody.appendChild(tr);
+  }
+  document.querySelectorAll('.manual-field').forEach(el=>el.addEventListener('input',updateEditorTotals));
+  $('scoreDialog').showModal();updateEditorTotals();
+}
+function updateEditorTotals(){
+  for(const key of ['eyeL','eyeR','nose','mouth']){
+    const placed=clamp($(editInputId(key,'placed')).value,0,5.25),pos=clamp($(editInputId(key,'posPts')).value,0,1.8),ang=clamp($(editInputId(key,'angPts')).value,0,.45);
+    $(editInputId(key,'total')).innerHTML=`<strong>${fmt(placed+pos+ang)}</strong>`;
+  }
+}
+function saveManualScores(){
+  const row=batchResults.find(r=>r.id===editRowId);if(!row)return;
+  const parts={};
+  for(const key of ['eyeL','eyeR','nose','mouth']){
+    const placed=clamp($(editInputId(key,'placed')).value,0,5.25),posPts=clamp($(editInputId(key,'posPts')).value,0,1.8),angPts=clamp($(editInputId(key,'angPts')).value,0,.45);
+    parts[key]={placed,posPts,angPts,total:placed+posPts+angPts,dist:row.result.parts[key].dist,angDiff:row.result.parts[key].angDiff,det:row.result.parts[key].det};
+  }
+  row.manual={parts,reason:$('editReason').value.trim(),timestamp:new Date().toISOString()};
+  $('scoreDialog').close();renderBatch();
+}
+function resetManualScores(){
+  const row=batchResults.find(r=>r.id===editRowId);if(!row)return;
+  row.manual=null;$('scoreDialog').close();renderBatch();
+}
+function markComparisonStale(){if(batchResults.length)generateComparisonImage();}
+
+/* ---------- comparison PNG ---------- */
+function roundRect(ctx,x,y,w,h,r){
+  const rr=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+rr,y);ctx.arcTo(x+w,y,x+w,y+h,rr);ctx.arcTo(x+w,y+h,x,y+h,rr);ctx.arcTo(x,y+h,x,y,rr);ctx.arcTo(x,y,x+w,y,rr);ctx.closePath();
+}
+function loadDataUrl(url){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=url})}
+async function generateComparisonImage(){
+  const canvas=$('comparisonCanvas'),ctx=canvas.getContext('2d'),ranked=rankedRows(),rankMap=new Map(ranked.map((r,i)=>[r.id,i+1])),rows=displayRows().filter(r=>r.result&&!r.error).slice(0,9);
+  canvas.width=1800;canvas.height=1200;ctx.fillStyle='#f6f7f9';ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#111';ctx.fillRect(0,0,canvas.width,112);
+  ctx.fillStyle='#fff';ctx.font='700 42px system-ui, sans-serif';ctx.fillText('福笑い競技　採点結果',54,68);
+  ctx.font='500 22px system-ui, sans-serif';ctx.fillStyle='#ddd';ctx.fillText(`30点満点 / 最終採点 / 表示順: ${sortLabel()}`,54,99);
+  const imgs={};await Promise.all(rows.map(async r=>{if(r.thumb)try{imgs[r.id]=await loadDataUrl(r.thumb)}catch(e){}}));
+  const cols=3,gap=22,margin=44,top=136,cardW=(canvas.width-margin*2-gap*2)/3,cardH=322;
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i],rank=rankMap.get(r.id)||'—',col=i%cols,row=Math.floor(i/cols),x=margin+col*(cardW+gap),y=top+row*(cardH+gap),status=getRowStatus(r),parts=getFinalParts(r);
+    ctx.fillStyle='#fff';roundRect(ctx,x,y,cardW,cardH,18);ctx.fill();
+    ctx.strokeStyle=rank===1?'#d4a017':rank===2?'#9aa0a6':rank===3?'#b87333':'#d9dce1';ctx.lineWidth=rank<=3?5:2;ctx.stroke();
+    ctx.fillStyle='#000';ctx.font='800 30px system-ui, sans-serif';ctx.fillText(`${rank}位`,x+22,y+42);
+    ctx.fillStyle='#000';ctx.font='800 28px system-ui, sans-serif';ctx.fillText(`Team ${r.team??'?'}`,x+105,y+42);
+    ctx.font='800 40px system-ui, sans-serif';ctx.fillText(`${fmt(getFinalTotal(r))}`,x+cardW-160,y+48);
+    ctx.font='600 17px system-ui, sans-serif';ctx.fillStyle='#666';ctx.fillText('/ 30.00',x+cardW-79,y+47);
+    if(imgs[r.id])ctx.drawImage(imgs[r.id],x+22,y+66,118,168);
+    else{ctx.fillStyle='#eee';ctx.fillRect(x+22,y+66,118,168)}
+    const sx=x+162,sy=y+88;
+    ctx.fillStyle='#222';ctx.font='700 18px system-ui, sans-serif';
+    for(const [j,pair] of [['左目',parts.eyeL],['右目',parts.eyeR],['鼻',parts.nose],['口',parts.mouth]].entries()){
+      const yy=sy+j*38;ctx.fillText(pair[1].total!=null?`${pair[0]}  ${fmt(pair[1].total)}点`:`${pair[0]}  —`,sx,yy);
+      ctx.fillStyle='#e8ebef';ctx.fillRect(sx,yy+8,cardW-205,8);ctx.fillStyle='#333';ctx.fillRect(sx,yy+8,(cardW-205)*Math.max(0,Math.min(1,pair[1].total/7.5)),8);ctx.fillStyle='#222';
+    }
+    ctx.font='700 16px system-ui, sans-serif';
+    if(status==='MANUAL'){ctx.fillStyle='#146c2e';ctx.fillText('手動補正',x+162,y+266)}
+    else if(status==='CHECK'){ctx.fillStyle='#9a5700';ctx.fillText('要確認',x+162,y+266)}
+    else{ctx.fillStyle='#146c2e';ctx.fillText('判定OK',x+162,y+266)}
+    if(r.manual?.reason){ctx.font='500 13px system-ui, sans-serif';ctx.fillStyle='#666';const note=r.manual.reason.length>28?r.manual.reason.slice(0,28)+'…':r.manual.reason;ctx.fillText(note,x+162,y+291)}
+    ctx.fillStyle='#777';ctx.font='500 12px system-ui, sans-serif';ctx.fillText(r.file.length>34?r.file.slice(0,31)+'…':r.file,x+22,y+260);
+  }
+  ctx.fillStyle='#777';ctx.font='500 15px system-ui, sans-serif';ctx.fillText(`生成: ${new Date().toLocaleString('ja-JP')}　※ 緑点・赤点等の詳細は参加者モードで確認できます。`,44,1172);
+  $('comparisonCard').querySelector('h2').textContent='比較結果画像';$('comparisonCard').classList.remove('hidden');
+}
+function downloadComparisonPNG(){
+  const canvas=$('comparisonCanvas');canvas.toBlob(blob=>{
+    if(!blob)return;const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fukuwarai_comparison.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  },'image/png');
+}
+
+/* ---------- CSV ---------- */
+function csvEscape(v){const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s}
+function downloadCSV(){
+  const ranked=rankedRows(),rankMap=new Map(ranked.map((r,i)=>[r.id,i+1])),
+    head=['rank','team','file','auto_total','final_total','manual_override','left_eye','right_eye','nose','mouth','manual_reason','manual_timestamp','detected_parts','position_error_sum_mm','team_auto','team_similarity','team_confidence','status'],lines=[head.join(',')];
+  for(const r of batchResults){
+    const p=r.result?getFinalParts(r):null,vals=[rankMap.get(r.id)||'',r.team||'',r.file,r.result?fmt(r.result.total):'',r.result?fmt(getFinalTotal(r)):'',r.manual?'YES':'NO',
+      p?fmt(p.eyeL.total):'',p?fmt(p.eyeR.total):'',p?fmt(p.nose.total):'',p?fmt(p.mouth.total):'',r.manual?.reason||'',r.manual?.timestamp||'',
+      r.metrics?.detected??'',r.metrics?fmt(r.metrics.posSum,1):'',r.teamInfo?.team??'',r.teamInfo?fmt(r.teamInfo.similarity,3):'',r.teamInfo?fmt(r.teamInfo.confidence,3):'',r.error||getRowStatus(r)];
+    lines.push(vals.map(csvEscape).join(','));
+  }
+  const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='fukuwarai_scores.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+enableButtons();
+</script>
+</body>
+</html>
