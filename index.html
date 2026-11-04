@@ -103,7 +103,7 @@ th{font-size:12px;color:#555;background:#fafafa}.num{width:84px;min-height:42px;
 <body>
 <header>
  <div style="font-size:20px;font-weight:800">ロボット競技大会 採点システム</div>
- <small>v2.10 Fukuwarai Manual A3 / 8チーム / 4競技 / 総合100点</small>
+ <small>v2.11 Stall Order & Defaults / 8チーム / 4競技 / 総合100点</small>
 </header>
 <nav id="tabs"></nav>
 <main>
@@ -132,11 +132,11 @@ const KEY='robot_competition_v22'; const OLD_KEY='robot_competition_v21';
 const teamsSeed=()=>[
 {id:'t1',no:'01',name:'京都府山城広域振興局 チームまゆまろ',active:true},
 {id:'t2',no:'02',name:'精華町 SEIKA',active:true},
-{id:'t3',no:'03',name:'スイッチャブルズ',active:true},
+{id:'t3',no:'03',name:'大阪電気通信大学 自由工房　スイッチャブルズ',active:true},
 {id:'t4',no:'04',name:'京都先端科学大学',active:true},
 {id:'t5',no:'05',name:'同志社大 アバチャレ',active:true},
-{id:'t6',no:'06',name:'nasc',active:true},
-{id:'t7',no:'07',name:'JeroLabo',active:true},
+{id:'t6',no:'06',name:'奈良先端大　nasc',active:true},
+{id:'t7',no:'07',name:'大阪電気通信大学 鄭研究室　JeroLabo',active:true},
 {id:'t8',no:'08',name:'サンシード セイカ GUARDIANS',active:true}
 ];
 let st;
@@ -281,6 +281,8 @@ function executeCompleteReset(){
  stopwatch.elapsedMs=0;
  if(stopwatch.timer){clearInterval(stopwatch.timer);stopwatch.timer=null}
  fukuSyncInfo={imported:0,skipped:0,warnings:[],updatedAt:null};
+ localStorage.removeItem(C2_DEFAULTS_MIGRATION_KEY);
+ applyC2DefaultsOnce();
  resetConfirmOpen=false;
  render();
  showMainSection('overall');
@@ -288,20 +290,20 @@ function executeCompleteReset(){
 
 
 
-const OFFICIAL_ENTRIES_V1=[
+const OFFICIAL_ENTRIES_V2=[
  {no:'01',name:'京都府山城広域振興局 チームまゆまろ'},
  {no:'02',name:'精華町 SEIKA'},
- {no:'03',name:'スイッチャブルズ'},
+ {no:'03',name:'大阪電気通信大学 自由工房　スイッチャブルズ'},
  {no:'04',name:'京都先端科学大学'},
  {no:'05',name:'同志社大 アバチャレ'},
- {no:'06',name:'nasc'},
- {no:'07',name:'JeroLabo'},
+ {no:'06',name:'奈良先端大　nasc'},
+ {no:'07',name:'大阪電気通信大学 鄭研究室　JeroLabo'},
  {no:'08',name:'サンシード セイカ GUARDIANS'}
 ];
-function applyOfficialEntriesV1(){
+function applyOfficialEntriesV2(){
  if(!Array.isArray(st.teams))return;
  let changed=false;
- OFFICIAL_ENTRIES_V1.forEach((o,i)=>{
+ OFFICIAL_ENTRIES_V2.forEach((o,i)=>{
    const t=st.teams[i];
    if(!t)return;
    if(t.no!==o.no||t.name!==o.name){
@@ -542,6 +544,48 @@ function renderC1(){
  if(stopwatch.running){updateStopwatchDisplay();const status=document.getElementById('stopwatchStatus');const team=st.teams.find(t=>t.id===stopwatch.teamId);if(status)status.textContent=`計測中：${team?.no??''} ${team?.name??''}`;}
  else if(selectedC1TeamId){const status=document.getElementById('stopwatchStatus');const team=st.teams.find(t=>t.id===selectedC1TeamId);if(status)status.textContent=`入力対象：${team?.no??''} ${team?.name??''}`;}
 }
+const C2_OPERATION_ORDER=['03','01','05','02','06','04','07','08'];
+const C2_DEFAULT_STALL={
+ '01':'B', // ラッキーボール
+ '02':'A', // スマートボール
+ '03':'C', // ビリビリ棒
+ '04':'B', // ラッキーボール
+ '05':'C', // ビリビリ棒
+ '06':'C', // ビリビリ棒
+ '07':'C', // ビリビリ棒
+ '08':'A'  // スマートボール
+};
+const C2_DEFAULTS_MIGRATION_KEY='robot_competition_v211_c2_defaults_applied';
+function c2OperationalTeams(){
+ const order=new Map(C2_OPERATION_ORDER.map((no,i)=>[no,i]));
+ return active().slice().sort((a,b)=>(order.get(a.no)??999)-(order.get(b.no)??999));
+}
+function c2OperationalIndex(no){
+ const i=C2_OPERATION_ORDER.indexOf(no);
+ return i>=0?i+1:'—';
+}
+function applyC2DefaultsOnce(){
+ if(localStorage.getItem(C2_DEFAULTS_MIGRATION_KEY)==='1')return;
+ let changed=false;
+ for(const t of st.teams){
+   const type=C2_DEFAULT_STALL[t.no];
+   if(!type)continue;
+   st.c2[t.id]??={};
+   const d=st.c2[t.id];
+   if(d.count===undefined||d.count===null||d.count===''){
+     d.count='1';
+     changed=true;
+   }
+   d.s1??={};
+   if(!d.s1.type){
+     d.s1.type=type;
+     changed=true;
+   }
+ }
+ if(changed)localStorage.setItem(KEY,JSON.stringify(st));
+ localStorage.setItem(C2_DEFAULTS_MIGRATION_KEY,'1');
+}
+
 function stallUI(tid,key,slot){
  const type=slot?.type||'';
  let detail='';
@@ -559,10 +603,12 @@ function stallUI(tid,key,slot){
 function renderC2(){
  const sr=stageRank(c2Score);
  document.getElementById('c2').innerHTML=`<div class="card"><h2>遊戯屋台競技 <span class="muted">/30点</span></h2>
+ <div class="note"><b>実施順：</b> 03 → 01 → 05 → 02 → 06 → 04 → 07 → 08。遊戯屋台だけこの順番で進行します。</div>
  <div class="note"><b>A:</b> 異なる層に入れば各+10（最大30） / <b>B:</b> ■=ボール1つ10点、●＋▲=異なる2種類20点、●＋●=同じ色25点、🍎＋🍎=30点 / <b>C:</b> 片手成功20、両手成功30。2競技の場合は総得点×3/5、競技最大30点として上限処理します。</div>
+ <div class="note">各Teamの第1希望屋台を「屋台1」に初期設定済みです。必要に応じて変更、または2競技目を追加できます。既に入力した採点内容は自動上書きしません。</div>
  <div class="note">旧資料の「A:10 / B:20 / C:30」は廃止済みです。A/B/Cとも詳細ルールに基づき最大30点として採点します。</div>
- <div class="tablewrap"><table><tr><th>順位</th><th>No.</th><th>Team</th><th>挑戦数</th><th>屋台1</th><th>屋台2</th><th>生得点</th><th>最終点</th></tr>
- ${active().map(t=>{const d=st.c2[t.id]||{},s=c2Score(t),count=Number(d.count||1)===2?2:1;return `<tr><td>${sr.get(t.id)??'—'}</td><td>${esc(t.no)}</td><td>${esc(t.name)}</td>
+ <div class="tablewrap"><table><tr><th>競技順</th><th>順位</th><th>No.</th><th>Team</th><th>挑戦数</th><th>屋台1</th><th>屋台2</th><th>生得点</th><th>最終点</th></tr>
+ ${c2OperationalTeams().map(t=>{const d=st.c2[t.id]||{},s=c2Score(t),count=Number(d.count||1)===2?2:1;return `<tr><td><span class="badge">${c2OperationalIndex(t.no)}</span></td><td>${sr.get(t.id)??'—'}</td><td>${esc(t.no)}</td><td>${esc(t.name)}</td>
  <td><select class="sel" data-c2count="${t.id}"><option value="1" ${count===1?'selected':''}>1競技</option><option value="2" ${count===2?'selected':''}>2競技</option></select></td>
  <td>${stallUI(t.id,'s1',d.s1||{})}</td><td>${count===2?stallUI(t.id,'s2',d.s2||{}):'—'}</td><td>${s.raw.toFixed(1)}</td><td class="scorebig">${s.total.toFixed(1)}${s.duplicate?' <span class="badge wait">同じ屋台は不可</span>':''}</td></tr>`}).join('')}
  </table></div></div>`;
@@ -704,7 +750,8 @@ window.addEventListener('message',e=>{
 window.addEventListener('pageshow',()=>{if(syncFukuwaraiResults())render()});
 window.addEventListener('focus',()=>{if(syncFukuwaraiResults())render()});
 window.addEventListener('storage',e=>{if(e.key===FUKU_KEY){syncFukuwaraiResults();render()}});
-applyOfficialEntriesV1();
+applyOfficialEntriesV2();
+applyC2DefaultsOnce();
 render();
 if('serviceWorker'in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
